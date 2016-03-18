@@ -429,7 +429,8 @@
               }, "\" >> /home/ec2-user/.bash_profile",
               "git pull ", {
                 "Ref": "repoUrl"
-              }
+              },
+              "wget https://raw.githubusercontent.com/ansible/ansible/devel/contrib/inventory/ec2.py"
             ]]
           }
         }
