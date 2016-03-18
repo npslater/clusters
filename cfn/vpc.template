@@ -1,0 +1,508 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "keyPair": {
+      "Type": "String"
+    },
+    "kmsKeyAdmin": {
+      "Type": "String"
+    }
+  },
+  "Mappings": {
+    "ami": {
+      "us-east-1": {
+        "default": "ami-8fcee4e5"
+      },
+      "us-west-1": {
+        "default": "ami-d1f482b1"
+      },
+      "us-west-2": {
+        "default": "ami-63b25203"
+      },
+      "eu-west-1": {
+        "default": "ami-e1398992"
+      },
+      "eu-central-1": {
+        "default": "ami-d22932be"
+      },
+      "ap-northeast-1": {
+        "default": "ami-59bdb937"
+      },
+      "ap-northeast-2": {
+        "default": "ami-4d1fd123"
+      },
+      "ap-southeast-1": {
+        "default": "ami-0103cd62"
+      },
+      "ap-southeast-2": {
+        "default": "ami-11032472"
+      },
+      "sa-east-1": {
+        "default": "ami-f0f4779c"
+      }
+    },
+    "zone": {
+      "us-east-1": {
+        "a": "us-east-1a",
+        "b": "us-east-1b",
+        "c": "us-east-1c"
+      },
+      "us-west-1": {
+        "a": "us-west-1a",
+        "b": "us-west-1b"
+      },
+      "us-west-2": {
+        "a": "us-west-2a",
+        "b": "us-west-2b",
+        "c": "us-west-2c"
+      },
+      "eu-west-1": {
+        "a": "eu-west-1a",
+        "b": "eu-west-1b",
+        "c": "eu-west-1c"
+      },
+      "eu-central-1": {
+        "a": "eu-central-1a",
+        "b": "eu-central-1b"
+      },
+      "ap-northeast-1": {
+        "a": "ap-northeast-1a",
+        "b": "ap-northeast-1b",
+        "c": "ap-northeast-1c"
+      },
+      "ap-southeast-1": {
+        "a": "ap-southeast-1a",
+        "b": "ap-southeast-1b"
+      },
+      "ap-southeast-2": {
+        "a": "ap-southeast-2a",
+        "b": "ap-southeast-2b"
+      },
+      "sa-east-1": {
+        "a": "sa-east-1a",
+        "b": "sa-east-1b"
+      }
+    }
+  },
+  "Resources": {
+    "ansibleS3Bucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "Tags": [{
+          "Key": "Name",
+          "Value": {
+            "Ref": "AWS::StackName"
+          }
+        }]
+      }
+    },
+    "vpc": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "10.0.0.0/16",
+        "EnableDnsHostnames": true,
+        "Tags": [{
+          "Key": "Name",
+          "Value": {
+            "Ref": "AWS::StackName"
+          }
+        }]
+      }
+    },
+    "publicSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "vpc"
+        },
+        "CidrBlock": "10.0.0.0/24",
+        "Tags": [{
+          "Key": "Name",
+          "Value": {
+            "Ref": "AWS::StackName"
+          }
+        }]
+      }
+    },
+    "privateSubnet1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "vpc"
+        },
+        "CidrBlock": "10.0.1.0/24",
+        "AvailabilityZone": {
+          "Fn::FindInMap": ["zone", {
+            "Ref": "AWS::Region"
+          }, "a"]
+        },
+        "Tags": [{
+          "Key": "Name",
+          "Value": {
+            "Ref": "AWS::StackName"
+          }
+        }]
+      }
+    },
+    "privateSubnet2": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "vpc"
+        },
+        "CidrBlock": "10.0.3.0/24",
+        "AvailabilityZone": {
+          "Fn::FindInMap": ["zone", {
+            "Ref": "AWS::Region"
+          }, "b"]
+        },
+        "Tags": [{
+          "Key": "Name",
+          "Value": {
+            "Ref": "AWS::StackName"
+          }
+        }]
+      }
+    },
+    "natIp": {
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "Domain": "vpc"
+      }
+    },
+    "natGateway": {
+      "Type": "AWS::EC2::NatGateway",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "publicSubnet"
+        },
+        "AllocationId": {
+          "Fn::GetAtt": ["natIp", "AllocationId"]
+        }
+      }
+    },
+    "internetGateway": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {
+        "Tags": [{
+          "Key": "Name",
+          "Value": {
+            "Ref": "AWS::StackName"
+          }
+        }]
+      }
+    },
+    "igwAttachment": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "InternetGatewayId": {
+          "Ref": "internetGateway"
+        },
+        "VpcId": {
+          "Ref": "vpc"
+        }
+      }
+    },
+    "publicRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "vpc"
+        },
+        "Tags": [{
+          "Key": "Name",
+          "Value": {
+            "Ref": "AWS::StackName"
+          }
+        }]
+      }
+    },
+    "publicDefaultRoute": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "publicRouteTable"
+        },
+        "GatewayId": {
+          "Ref": "internetGateway"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0"
+      }
+    },
+    "publicSubnetRouteAssoc": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "publicRouteTable"
+        },
+        "SubnetId": {
+          "Ref": "publicSubnet"
+        }
+      }
+    },
+    "privateRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "vpc"
+        },
+        "Tags": [{
+          "Key": "Name",
+          "Value": {
+            "Ref": "AWS::StackName"
+          }
+        }]
+      }
+    },
+    "privateDefaultRoute": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "privateRouteTable"
+        },
+        "NatGatewayId": {
+          "Ref": "natGateway"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0"
+      }
+    },
+    "privateSubnetRouteAssoc1": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "privateRouteTable"
+        },
+        "SubnetId": {
+          "Ref": "privateSubnet1"
+        }
+      }
+    },
+    "privateSubnetRouteAssoc2": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "privateRouteTable"
+        },
+        "SubnetId": {
+          "Ref": "privateSubnet2"
+        }
+      }
+    },
+    "ansibleMasterSg": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Ansible master security group",
+        "SecurityGroupIngress": [{
+          "CidrIp": "0.0.0.0/0",
+          "FromPort": 22,
+          "ToPort": 22,
+          "IpProtocol": "tcp"
+        }],
+        "Tags": [{
+          "Key": "Name",
+          "Value": {
+            "Ref": "AWS::StackName"
+          }
+        }],
+        "VpcId": {
+          "Ref": "vpc"
+        }
+      }
+    },
+    "ansibleSlaveSg": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Ansible slave security group",
+        "Tags": [{
+          "Key": "Name",
+          "Value": {
+            "Ref": "AWS::StackName"
+          }
+        }],
+        "VpcId": {
+          "Ref": "vpc"
+        }
+      }
+    },
+    "ansibleSlaveSgIngress": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "SourceSecurityGroupId": {
+          "Ref": "ansibleSlaveSg"
+        },
+        "FromPort": 22,
+        "ToPort": 22,
+        "IpProtocol": "tcp",
+        "GroupId": {
+          "Ref": "ansibleSlaveSg"
+        }
+      }
+    },
+    "ansibleMasterRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Principal": {
+              "Service": ["ec2.amazonaws.com"]
+            },
+            "Action": ["sts:AssumeRole"]
+          }]
+        },
+        "Path": {
+          "Fn::Join": ["/", ["", {
+            "Ref": "AWS::StackName"
+          }, "ansible/"]]
+        },
+        "Policies": [{
+          "PolicyName": "ansibleMaster",
+          "PolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [{
+              "Effect": "Allow",
+              "NotAction": "iam:*",
+              "Resource": "*"
+            }]
+          }
+        }]
+      }
+    },
+    "ansibleMasterInstanceProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Path": {
+          "Fn::Join": ["/", ["", {
+            "Ref": "AWS::StackName"
+          }, "ansible/"]]
+        },
+        "Roles": [{
+          "Ref": "ansibleMasterRole"
+        }]
+      }
+    },
+    "ansibleMasterLaunchConfig": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+        "AssociatePublicIpAddress": true,
+        "IamInstanceProfile": {
+          "Ref": "ansibleMasterInstanceProfile"
+        },
+        "ImageId": {
+          "Fn::FindInMap": ["ami", {
+            "Ref": "AWS::Region"
+          }, "default"]
+        },
+        "InstanceType": "t2.micro",
+        "SecurityGroups": [{
+          "Ref": "ansibleMasterSg"
+        }, {
+          "Ref": "ansibleSlaveSg"
+        }],
+        "KeyName": {
+          "Ref": "keyPair"
+        },
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Join": ["\n", [
+              "#!/bin/bash",
+              "yum install -y gcc",
+              "pip install virtualenvwrapper",
+              "echo \"source /usr/local/bin/virtualenvwrapper.sh\" >> /home/ec2-user/.bash_profile",
+              "sudo su - ec2-user",
+              "source /usr/local/bin/virtualenvwrapper.sh",
+              "mkvirtualenv ansible",
+              "workon ansible",
+              "pip install ansible",
+              "echo \"workon ansible\" >> /home/ec2-user/.bash_profile",
+              "echo \"export AWS_KMS_KEY_ID=", {
+                "Fn::GetAtt": ["ansibleMasterKey", "Arn"]
+              }, "\" >> /home/ec2-user/.bash_profile",
+              "echo \"export AWS_BUCKET_NAME=", {
+                "Ref": "ansibleS3Bucket"
+              }, "\" >> /home/ec2-user/.bash_profile"
+            ]]
+          }
+        }
+      },
+      "DependsOn": "igwAttachment"
+    },
+    "ansibleMasterAsg": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "LaunchConfigurationName": {
+          "Ref": "ansibleMasterLaunchConfig"
+        },
+        "DesiredCapacity": 1,
+        "MinSize": 1,
+        "MaxSize": 1,
+        "VPCZoneIdentifier": [{
+          "Ref": "publicSubnet"
+        }],
+        "Tags": [{
+          "Key": "Name",
+          "Value": {
+            "Ref": "AWS::StackName"
+          },
+          "PropagateAtLaunch": true
+        }]
+      }
+    },
+    "ansibleMasterKey": {
+      "Type": "AWS::KMS::Key",
+      "Properties": {
+        "Description": "CMK used by ansible",
+        "KeyPolicy": {
+          "Version": "2012-10-17",
+          "Id": "ansible",
+          "Statement": [{
+            "Sid": "Allow administration of the key",
+            "Effect": "Allow",
+            "Principal": {
+              "AWS": {
+                "Fn::Join": ["", ["arn:aws:iam::", {
+                  "Ref": "AWS::AccountId"
+                }, ":user/", {
+                  "Ref": "kmsKeyAdmin"
+                }]]
+              }
+            },
+            "Action": [
+              "kms:Create*",
+              "kms:Describe*",
+              "kms:Enable*",
+              "kms:List*",
+              "kms:Put*",
+              "kms:Update*",
+              "kms:Revoke*",
+              "kms:Disable*",
+              "kms:Get*",
+              "kms:Delete*",
+              "kms:ScheduleKeyDeletion",
+              "kms:CancelKeyDeletion"
+            ],
+            "Resource": "*"
+          }, {
+            "Sid": "Allow use of the key",
+            "Effect": "Allow",
+            "Principal": {
+              "AWS": {
+                "Fn::GetAtt": ["ansibleMasterRole", "Arn"]
+              }
+            },
+            "Action": [
+              "kms:Encrypt",
+              "kms:Decrypt",
+              "kms:ReEncrypt",
+              "kms:GenerateDataKey*",
+              "kms:DescribeKey"
+            ],
+            "Resource": "*"
+          }]
+        }
+      }
+    }
+  },
+  "Outputs": {}
+}

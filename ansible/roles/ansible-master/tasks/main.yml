@@ -1,0 +1,5 @@
+tasks:
+- name: ssh-keygen
+  shell: ssh-keygen -N '' -f ~/.ssh/id_ansible
+- name: put-key-s3
+  shell: aws s3 cp ~/.ssh/id_ansible s3://${AWS_BUCKET_NAME}
