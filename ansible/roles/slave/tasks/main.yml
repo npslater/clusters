@@ -1,9 +1,0 @@
-tasks:
-- name: get-key-s3
-  shell: aws s3 cp s3://${AWS_BUCKET_NAME}/id_ansible /home/ec2-user/.ssh/id_ansible
-
-- authorized_key:
-    user: charlie
-    key: "{{ lookup('file', '/home/ec2-user/.ssh/id_ansible.pub') }}"
-    path: '/etc/ssh/authorized_keys/charlie'
-    manage_dir: no
