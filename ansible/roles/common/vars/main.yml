@@ -1,0 +1,3 @@
+cmk_arn: "{{ lookup('env', 'AWS_KMS_KEY_ID') }}"
+ssh_key_name: "{{ lookup('env', 'AWS_STACK_NAME') }}"
+s3_bucket: "{{ lookup('env', 'AWS_BUCKET_NAME') }}"

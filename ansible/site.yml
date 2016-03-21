@@ -1,3 +1,4 @@
 - hosts: master
   roles:
-    - ansible-master 
+    - common
+    - ansible-master
