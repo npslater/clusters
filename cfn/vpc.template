@@ -413,24 +413,35 @@
               "yum install -y gcc",
               "yum install -y git",
               "yum install -y openvpn",
-              "pip install virtualenvwrapper",
-              "echo \"source /usr/local/bin/virtualenvwrapper.sh\" >> /home/ec2-user/.bash_profile",
-              "sudo su - ec2-user",
-              "source /usr/local/bin/virtualenvwrapper.sh",
-              "mkvirtualenv ansible",
-              "workon ansible",
               "pip install ansible",
-              "echo \"workon ansible\" >> /home/ec2-user/.bash_profile",
-              "echo \"export AWS_KMS_KEY_ID=", {
-                "Fn::GetAtt": ["ansibleMasterKey", "Arn"]
-              }, "\" >> /home/ec2-user/.bash_profile",
-              "echo \"export AWS_BUCKET_NAME=", {
-                "Ref": "ansibleS3Bucket"
-              }, "\" >> /home/ec2-user/.bash_profile",
-              "git pull ", {
-                "Ref": "repoUrl"
+              "pip install boto",
+              "pip install boto3",
+              "wget https://raw.githubusercontent.com/ansible/ansible/devel/contrib/inventory/ec2.py",
+              "wget https://raw.githubusercontent.com/ansible/ansible/devel/contrib/inventory/ec2.ini",
+              "mkdir -p /etc/ansible"
+              "cp ec2.py /etc/ansible/ec2.py",
+              "cp ec2.ini /etc/ansible/ec2.ini", {
+                "Fn::Join": ["", ["echo \"export AWS_KMS_KEY_ID=", {
+                  "Fn::GetAtt": ["ansibleMasterKey", "Arn"]
+                }, "\" >> /home/ec2-user/.bash_profile"]]
+              }, {
+                "Fn::Join": ["", ["echo \"export AWS_BUCKET_NAME=", {
+                  "Ref": "ansibleS3Bucket"
+                }, "\" >> /home/ec2-user/.bash_profile"]]
+              }, {
+                "Fn::Join": ["", ["echo \"export AWS_REGION=", {
+                  "Ref": "AWS::Region"
+                }]]
+              }, {
+                "Fn::Join": ["", ["echo \"export AWS_STACK_NAME=", {
+                  "Ref": "AWS::StackName"
+                }]]
               },
-              "wget https://raw.githubusercontent.com/ansible/ansible/devel/contrib/inventory/ec2.py"
+              "sudo su - ec2-user", {
+                "Fn::Join": ["", ["git clone ", {
+                  "Ref": "repoUrl"
+                }]]
+              }
             ]]
           }
         }
