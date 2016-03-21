@@ -1,8 +1,10 @@
+- debug: msg="SSH key pair name: {{ ssh_key_name }}"
+
 - name: generate the SSH key pair for connecting ansible master to slaves
-  shell: ssh-keygen -N '' -f /home/ec2-user/.ssh/{{ ssh_key_name }}
+  shell: ssh-keygen -N '' -f /home/ec2-user/.ssh/id_{{ ssh_key_name }}
 
 - name: import the key material into EC2
   ec2_key:
-    name: "{{ ssh_key_name }}"
+    name: "id_{{ ssh_key_name }}"
     key_material: "{{ item }}"
-  with_file: /home/ec2-user/.ssh/{{ ssh_key_name }}.pub
+  with_file: /home/ec2-user/.ssh/id_{{ ssh_key_name }}.pub

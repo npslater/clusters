@@ -416,7 +416,7 @@
                 }]]
               },
               "chmod 755 clusters/bootstrap.sh",
-              "cd clusters && bootstrap.sh",
+              "clusters/bootstrap.sh",
               "sudo su - ec2-user", {
                 "Fn::Join": ["", ["git clone ", {
                   "Ref": "repoUrl"
@@ -432,12 +432,13 @@
               }, {
                 "Fn::Join": ["", ["echo \"export AWS_REGION=", {
                   "Ref": "AWS::Region"
-                }]]
+                }, "\" >> /home/ec2-user/.bash_profile"]]
               }, {
                 "Fn::Join": ["", ["echo \"export AWS_STACK_NAME=", {
                   "Ref": "AWS::StackName"
-                }]]
-              }
+                }, "\" >> /home/ec2-user/.bash_profile"]]
+              },
+              "source /home/ec2-user/.bash_profile"
             ]]
           }
         }
